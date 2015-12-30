@@ -1,9 +1,26 @@
+/*--------------------------------------------------*/
+/* Touch Screen Using 2 Cameras						*/
+/* Created on:  25th Dec 2015 by Jong Hyun Seong	*/
+/* Last Edited 30th Dec 2015 bt Jong Hyun Seong     */
+/* All copyrights reserved							*/
+/*--------------------------------------------------*/
+
+
+
+/*------------------------------*/
+/*			Includes			*/
+/*------------------------------*/
+
 #include <cstdio>
 #include <cstdlib>
 #include <Windows.h>
 #include <iostream>
 #include <opencv\cv.hpp>
 #include <cmath>
+
+/*------------------------------*/
+/*		Local Defines			*/
+/*------------------------------*/
 
 #define MORPH_SIZE_CAM0_X 1
 #define MORPH_SIZE_CAM0_Y 3
@@ -14,9 +31,15 @@
 #define CAMERA_0_TAN_BASE 100
 #define CAMERA_1_TAN_BASE 100
 
+#define MOUSE_MULTIPLIER_X 10
+#define MOUSE_MULTIPLIER_Y 10
+
 using namespace cv;
 using namespace std;
 
+/*------------------------------*/
+/*	Local Global Variables		*/
+/*------------------------------*/
 
 //Camera 0 Parameters
 Point ROIOriginStart = { 0, 0 }; 
@@ -36,10 +59,22 @@ Rect ROIregion2;
 bool Start_found2 = false;
 bool End_found2 = false;
 
+
+//Tracker Settings
+bool MouseTrackON = false;
+
+
+
+/*------------------------------*/
+/*	Local Functions				*/
+/*------------------------------*/
+
 void ResetRegion(void)
 {
 	Start_found = false, End_found = false;
 	Start_found2 = false, End_found2 = false;
+
+	std::cout << "ROI0, ROI1 has been reset. please designate it again" << std::endl;
 }
 
 
@@ -47,7 +82,7 @@ void MouseCallBackFunc(int event, int x, int y, int flags, void* userdata)
 {
 	if (event == EVENT_LBUTTONDOWN && !Start_found)
 	{
-		cout << "Start Position designated at (" << x << ", " << y << ")" << endl;
+		cout << "Start Position of ROI0 designated at (" << x << ", " << y << ")" << endl;
 		ROIOriginStart = { x, y };
 		Start_found = true;
 
@@ -55,7 +90,7 @@ void MouseCallBackFunc(int event, int x, int y, int flags, void* userdata)
 
 	else if (event == EVENT_LBUTTONDOWN && Start_found && !End_found)
 	{
-		cout << "End Position designated at (" << x << ", " << y << ")" << endl;
+		cout << "End Position of ROI0 designated at (" << x << ", " << y << ")" << endl;
 		ROIOriginEnd = { x, y };
 
 		ROIregion = Rect(ROIOriginStart, ROIOriginEnd);
@@ -73,7 +108,7 @@ void MouseCallBackFuncCam2(int event, int x, int y, int flags, void* userdata)
 {
 	if (event == EVENT_LBUTTONDOWN && !Start_found2)
 	{
-		cout << "Start Position 2 designated at (" << x << ", " << y << ")" << endl;
+		cout << "Start Position of ROI1 designated at (" << x << ", " << y << ")" << endl;
 		ROIOriginStart2 = { x, y };
 		Start_found2 = true;
 
@@ -81,7 +116,7 @@ void MouseCallBackFuncCam2(int event, int x, int y, int flags, void* userdata)
 
 	else if (event == EVENT_LBUTTONDOWN && Start_found2 && !End_found2)
 	{
-		cout << "End Position 2 designated at (" << x << ", " << y << ")" << endl;
+		cout << "End Position of ROI1 designated at (" << x << ", " << y << ")" << endl;
 		ROIOriginEnd2 = { x, y };
 
 		ROIregion2 = Rect(ROIOriginStart2, ROIOriginEnd2);
@@ -146,7 +181,13 @@ int main(void)
 
 
 	VideoCapture Webcam0(0);
+
+	std::cout << "Initialized Camera 0" << std::endl;
+
 	VideoCapture Webcam1(1);
+
+	std::cout << "Initialized Camera 1" << std::endl;
+
 	Mat Frame0, Frame1, MoGframe0, MoGframe1;
 	Mat ROI0, ROI1;
 
@@ -155,6 +196,8 @@ int main(void)
 
 	Ptr<BackgroundSubtractorMOG2> pMOG1;
 	pMOG1 = createBackgroundSubtractorMOG2();
+
+	std::cout << "Initialized Background Subtractors" << std::endl;
 
 	POINT MousePosition;
 	
@@ -171,11 +214,14 @@ int main(void)
 	Mat ROI_image0, Morphed0, Cropped0;
 	Mat ROI_image1, Morphed1, Cropped1;
 
-	if (Webcam0.isOpened())
+	if (Webcam0.isOpened() && Webcam1.isOpened())
 	{
 		Webcam0 >> Frame0;
 		Webcam1 >> Frame1;
+
+		std::cout << "All Cameras have been Successfully Initialized" << std::endl;
 	}
+
 
 	int Rows = Frame0.rows;
 	int Cols = Frame1.cols;
@@ -185,14 +231,15 @@ int main(void)
 	namedWindow("Webcam1", CV_WINDOW_AUTOSIZE);
 	namedWindow("ROI0", CV_WINDOW_AUTOSIZE);
 	namedWindow("Morphed Background0", CV_WINDOW_AUTOSIZE);
-	//namedWindow("Background0", CV_WINDOW_AUTOSIZE);
 	namedWindow("ROI1", CV_WINDOW_AUTOSIZE);
 	namedWindow("Morphed Background1", CV_WINDOW_AUTOSIZE);
-	//namedWindow("Background1", CV_WINDOW_AUTOSIZE);
 
 	//Mouse Callback
 	setMouseCallback("Webcam0", MouseCallBackFunc, NULL);
 	setMouseCallback("Webcam1", MouseCallBackFuncCam2, NULL);
+
+
+	std::cout << "Starting Program" << std::endl;
 
 	while (Webcam0.isOpened() && Webcam1.isOpened())
 	{
@@ -269,11 +316,12 @@ int main(void)
 		rectangle(Frame1, ROIOriginStart2, ROIOriginEnd2, Scalar(255, 0, 0), 2, 8, 0);
 
 
+		//Update Webcam Frame
 		imshow("Webcam0", Frame0);
 		imshow("Webcam1", Frame1);
 
 
-
+		//Move Windows to 
 		moveWindow("Webcam0", 0, 0);
 		moveWindow("Webcam1", 0 + Cols, 0);
 
@@ -283,10 +331,13 @@ int main(void)
 		moveWindow("Morphed Background0", 0, 0 + Rows + 30);
 		moveWindow("Morphed Background1", 2*Cols, Rows + 100);
 
+
+		//Get Cursor Position with WINAPI
 		GetCursorPos(&MousePosition);
 
-		char key;
 
+		char key;
+		//Get Pressed Key
 		key = waitKey(1);
 
 		if (key == 'r')
@@ -294,21 +345,26 @@ int main(void)
 		else if (key == 27)
 			break;
 
-		CalculatedPosition = {640 - HandPosition0.x, HandPosition1.y};
 
-		if (End_found2 && End_found && key == 'm')
+		//Mouse Track Option Set------//
+		if (key == 'm')
+			MouseTrackON = true;
+		else if (key == 'n')
+			MouseTrackON = false;
+		//----------------------------//
+
+		CalculatedPosition = { MOUSE_MULTIPLIER_X*(640 - HandPosition0.x), MOUSE_MULTIPLIER_Y*(HandPosition1.y) };
+
+		if (End_found2 && End_found && MouseTrackON)
 			if ( !SetCursorPos(CalculatedPosition.x, CalculatedPosition.y) )
 				std::cout << "Set Fail" << std::endl;
 
-
-		
+			
 
 
 	}
 
-
-
-
+	std::cout << "Terminating Program" << std::endl;
 
 
 	return 0;
